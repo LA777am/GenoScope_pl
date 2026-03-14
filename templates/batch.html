@@ -1,0 +1,1514 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GenoScope // Batch Operations</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;500&family=Space+Grotesk:wght@300;500;700&display=swap"
+        rel="stylesheet">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* --- RESET & VARIABLES --- */
+        :root {
+            --bg-void: #050505;
+            --bg-panel: #0e0f11;
+            --border: rgba(255, 255, 255, 0.08);
+            --accent: #00ffcc;
+            --gold: #e0c48a;
+            --text-main: #e0e0e0;
+            --text-dim: #666;
+            --nav-height: 64px;
+            /* Fixed height for calculations */
+            --bg: #030406;
+            --glass: rgba(20, 25, 35, 0.6);
+            --border: rgba(255, 255, 255, 0.1);
+            --accent: #00f0ff;
+            /* Cyber Blue */
+            --highlight: #ffd700;
+            /* Gold */
+            --success: #00ff9d;
+            --text-main: #e0e0e0;
+            --text-dim: #6b7280;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--bg-void);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            /* Prevent body scroll, use inner scroll */
+            display: flex;
+            flex-direction: column;
+        }
+
+        .export-unit {
+        position: relative;
+        width: 100%;
+        height: 54px;
+        background: linear-gradient(90deg, rgba(6, 182, 212, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
+        border: 1px solid rgba(6, 182, 212, 0.2);
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        padding: 0 15px;
+        gap: 12px;
+        cursor: pointer;
+        overflow: hidden;
+        transition: all 0.4s ease;
+        }
+
+        .export-unit:hover {
+        background: linear-gradient(90deg, rgba(6, 182, 212, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+        border-color: #06b6d4;
+        box-shadow: 0 0 20px rgba(6, 182, 212, 0.15);
+        transform: translateY(-2px);
+        }
+
+        .scan-line {
+        position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+        transform: skewX(-20deg);
+        }
+        .export-unit:hover .scan-line { animation: scanPass 0.8s ease-in-out; }
+        @keyframes scanPass { 0% { left: -100%; } 100% { left: 200%; } }
+
+        .icon-zone {
+        width: 32px; height: 32px;
+        display: flex; align-items: center; justify-content: center;
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 4px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #06b6d4;
+        }
+
+        .meta-zone { display: flex; flex-direction: column; text-align: left; }
+        .label-main { font-family: 'JetBrains Mono'; font-size: 0.75rem; font-weight: 700; color: #fff; letter-spacing: 0.05em; }
+        .label-sub { font-family: 'JetBrains Mono'; font-size: 0.6rem; color: rgba(255, 255, 255, 0.5); margin-top: 2px; }
+        /* --- LOGOUT UNIT --- */
+        .logout-unit {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            /* Tech-boxy shape */
+            padding: 6px 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* --- THE POWER ICON --- */
+        .power-housing {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            height: 16px;
+            color: var(--text-dim);
+            /* Default dim color */
+            transition: color 0.3s ease;
+        }
+
+        .power-icon {
+            width: 100%;
+            height: 100%;
+        }
+
+
+        .text-housing {
+            position: relative;
+            height: 14px;
+            /* Fix height to font size */
+            width: 65px;
+            /* Ensure enough width for 'TERMINATE' */
+            overflow: hidden;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            letter-spacing: 0.08em;
+            font-weight: 500;
+        }
+
+        .text-housing span {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+        }
+
+        .label-stable {
+            color: #00ffcc;
+            transform: translateY(0);
+        }
+
+        .label-hover {
+            color: #ff3333;
+            /* Danger Red */
+            transform: translateY(100%);
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }
+
+
+        .logout-unit:hover {
+            border-color: rgba(255, 51, 51, 0.5);
+            /* Red Border */
+            background: rgba(255, 51, 51, 0.05);
+            /* Subtle Red Tint */
+            box-shadow: 0 0 15px rgba(255, 51, 51, 0.15);
+        }
+
+        .logout-unit:hover .power-housing {
+            color: #ff3333;
+            animation: flicker 2s infinite;
+            /* Subtle power surge effect */
+        }
+
+        /* Swap the text on hover */
+        .logout-unit:hover .label-stable {
+            transform: translateY(-100%);
+            opacity: 0;
+        }
+
+        .logout-unit:hover .label-hover {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .navbarspan{
+            color:#fff643;
+        }
+
+        /* --- CLICK STATE: POWER DOWN --- */
+        .logout-unit:active {
+            transform: scale(0.96);
+            background: rgba(255, 51, 51, 0.1);
+            border-color: #ff3333;
+        }
+
+        /* Subtle Flicker Animation */
+        @keyframes flicker {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.7;
+            }
+
+            52% {
+                opacity: 1;
+            }
+
+            54% {
+                opacity: 0.5;
+            }
+
+            56% {
+                opacity: 1;
+            }
+        }
+
+        /* --- 1. THE FIXED NAVBAR (HUD) --- */
+        .hud-nav {
+            height: var(--nav-height);
+            background: rgba(5, 5, 5, 0.9);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            z-index: 1000;
+            flex-shrink: 0;
+            /* Never shrink */
+        }
+
+        /* Left: Context */
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        /* --- HISTORY UNIT --- */
+        .history-unit {
+            background: rgba(0, 255, 204, 0.03); /* Very subtle cyan tint */
+            border: 1px solid rgba(0, 255, 204, 0.15);
+            border-radius: 4px;
+            padding: 6px 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+            position: relative;
+            overflow: hidden;
+            margin-right: 12px; /* Spacing from Logout button */
+        }
+
+        /* Icon Styling */
+        .history-unit .icon-housing {
+            display: flex; align-items: center; justify-content: center;
+            width: 16px; height: 16px;
+            color: var(--text-dim, #666);
+            transition: all 0.3s ease;
+        }
+
+        .history-icon { width: 100%; height: 100%; }
+
+        /* Text Styling (Reusing your logout structure) */
+        .history-unit .text-housing {
+            position: relative;
+            height: 14px;
+            width: 60px; /* Adjusted width for text */
+            overflow: hidden;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            letter-spacing: 0.08em;
+            font-weight: 500;
+        }
+
+        .history-unit .label-stable { color: var(--text-main, #e0e0e0); }
+
+        .history-unit .label-hover {
+            color: #00ffcc; /* Cyan for data */
+            transform: translateY(100%);
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }
+
+        /* --- HOVER EFFECTS --- */
+        .history-unit:hover {
+            border-color: rgba(0, 255, 204, 0.5);
+            background: rgba(0, 255, 204, 0.08);
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.15);
+        }
+
+        .history-unit:hover .icon-housing {
+            color: #00ffcc;
+            transform: rotate(-30deg); /* Subtle mechanical tick */
+        }
+
+        /* Trigger the text slide animation */
+        .history-unit:hover .label-stable { transform: translateY(-100%); opacity: 0; }
+        .history-unit:hover .label-hover { transform: translateY(0); opacity: 1; }
+
+        .history-unit:active { transform: scale(0.96); }
+
+        .back-btn {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+            padding: 6px 12px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 0.1em;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .back-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .back-btn::before {
+            content: '◄';
+            font-size: 8px;
+        }
+
+        .divider {
+            width: 1px;
+            height: 16px;
+            background: var(--border);
+            transform: skewX(-15deg);
+        }
+
+        .nav-context {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .nav-context span {
+            color: var(--text-main);
+            font-weight: 600;
+        }
+
+        /* Center: Brand */
+        .nav-brand {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 0.3em;
+            color: var(--text-dim);
+            opacity: 0.5;
+        }
+
+        /* Right: Status */
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .sys-clock {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--text-dim);
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            color: #00ff9d;
+            background: rgba(0, 255, 157, 0.05);
+            padding: 4px 8px;
+            border-radius: 2px;
+            border: 1px solid rgba(0, 255, 157, 0.1);
+        }
+
+        .status-dot {
+            width: 4px;
+            height: 4px;
+            background: #00ff9d;
+            border-radius: 50%;
+            box-shadow: 0 0 6px #00ff9d;
+        }
+
+
+        /* --- 2. MAIN SCROLLABLE CONTENT --- */
+        .app-shell {
+            flex: 1;
+            overflow-y: auto;
+            /* Internal scrolling */
+            position: relative;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 40px 40px;
+            background-attachment: local;
+            /* Scrolls with content */
+        }
+
+        /* Content Container */
+        .content-wrap {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px;
+        }
+
+        /* --- 3. MODAL (Properly Centered) --- */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(4px);
+            z-index: 2000;
+            display: none;
+            /* Hidden by default */
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-backdrop.active {
+            display: flex;
+        }
+
+        .modal-box {
+            background: #0a0a0a;
+            border: 1px solid var(--border);
+            width: 320px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            transform: translateY(10px);
+            animation: modalSlide 0.2s forwards;
+        }
+
+        @keyframes modalSlide {
+            to {
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            padding: 12px 16px;
+            background: #111;
+            border-bottom: 1px solid var(--border);
+            font-family: 'JetBrains Mono';
+            font-size: 11px;
+            color: var(--gold);
+            letter-spacing: 0.1em;
+        }
+
+        .modal-body {
+            padding: 24px 16px;
+            text-align: center;
+        }
+
+        .modal-body p {
+            font-size: 13px;
+            color: var(--text-main);
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .modal-body span {
+            font-size: 11px;
+            color: var(--text-dim);
+        }
+
+        .modal-actions {
+            display: flex;
+            border-top: 1px solid var(--border);
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 12px;
+            background: transparent;
+            border: none;
+            font-family: 'JetBrains Mono';
+            font-size: 10px;
+            cursor: pointer;
+            color: var(--text-dim);
+            border-right: 1px solid var(--border);
+            transition: 0.2s;
+        }
+
+        .modal-btn:last-child {
+            border-right: none;
+            color: #ff3333;
+        }
+
+        .modal-btn:hover {
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text-main);
+        }
+
+
+        /* --- UTILITY FOR CONTENT --- */
+        /* Just for demo visualization */
+        .grid-layout {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 30px;
+            height: 100%;
+        }
+        .genospan{
+            color: white;
+        }
+        .panel {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            padding: 20px;
+            border-radius: 4px;
+        }
+
+        h2 {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 16px;
+            color: var(--text-main);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 8px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: 'Space Grotesk', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            display: grid;
+            grid-template-rows: 60px 1fr;
+            background-image:
+                radial-gradient(circle at 10% 20%, rgba(0, 240, 255, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(255, 215, 0, 0.05) 0%, transparent 40%);
+        }
+
+        /* --- 1. HEADER (System Status) --- */
+        header {
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            z-index: 10;
+        }
+
+        .brand {
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            font-size: 1.2rem;
+        }
+
+        .brand span {
+            color: var(--highlight);
+        }
+
+        .sys-stats {
+            display: flex;
+            gap: 20px;
+            font-family: 'JetBrains Mono';
+            font-size: 0.7rem;
+            color: var(--text-dim);
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .indicator {
+            width: 6px;
+            height: 6px;
+            background: var(--success);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        @media screen and (max-width: 900px) {
+            
+            /* 1. Unlock scrolling & Kill the Desktop Grid */
+            body, html, .app-shell {
+                height: auto !important;
+                overflow-y: auto !important;
+            }
+
+            .core-grid {
+                display: flex !important;
+                flex-direction: column !important;
+                height: auto !important;
+            }
+
+            /* 2. Sidebar (Control Panel) - Make it full width on top */
+            .control-panel {
+                width: 100% !important;
+                height: auto !important;
+                padding: 20px !important;
+                border-right: none !important;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            }
+
+            /* 3. Main Content Area */
+            .visual-core {
+                padding: 20px 15px !important;
+                height: auto !important;
+            }
+
+            /* 4. Stack the Result Cards vertically */
+            .results-container {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 20px !important;
+                grid-template-rows: auto !important; /* Reset fixed rows */
+            }
+
+            .result-card, .gc-container, .full-width {
+                grid-column: auto !important;
+                grid-row: auto !important;
+                width: 100% !important;
+            }
+
+
+            .hud-nav {
+                position: relative !important; /* Stop it from floating */
+                height: auto !important;       /* Let it grow as big as needed */
+                min-height: auto !important;
+                flex-direction: column !important;
+                padding: 20px 10px !important;
+                background: #030406 !important; /* Solid background (Void color) */
+                z-index: 1000 !important;
+                border-bottom: 1px solid rgba(255,255,255,0.1) !important;
+            }
+
+
+            .nav-brand {
+                position: static !important;
+                transform: none !important;
+                margin-bottom: 15px !important;
+                text-align: center !important;
+                width: 100% !important;
+            }
+
+
+            .nav-right {
+                width: 100% !important;
+                justify-content: center !important;
+                flex-wrap: wrap !important; /* Allow buttons to drop to next line */
+                gap: 10px !important;
+                margin-top: 10px !important;
+            }
+
+
+            .app-shell {
+                margin-top: 0 !important;
+                padding-top: 0 !important;
+                height: auto !important;
+                overflow: visible !important;
+            }
+
+
+            .control-panel {
+                margin-top: 30px !important; /* <--- THIS IS THE FIX */
+                padding-top: 20px !important;
+                background: transparent !important; /* Remove clash */
+                border-right: none !important;
+            }
+
+            .file-wrapper { height: 100px !important; }
+            .btn-init, .export-unit { padding: 15px !important; }
+
+
+
+
+            .result-card, .gc-container {
+                height: auto !important; /* Allow card to grow */
+                min-height: 300px !important; /* Give it space */
+                padding: 15px !important;
+            }
+
+
+            canvas {
+                width: 100% !important;
+                height: 250px !important; /* Fixed height for readability */
+                max-width: 100% !important;
+            }
+
+
+            .summary-box {
+                order: 2; /* Move summary to bottom */
+            }
+        }
+
+        .core-grid {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            height: 100%;
+            overflow: hidden;
+        }
+
+
+        .control-panel {
+            background: rgba(10, 12, 16, 0.8);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+        }
+
+        /* UPLOAD ZONE */
+        .upload-zone {
+            padding: 30px;
+            border-bottom: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-zone::before {
+            /* Subtle Pulse Border */
+            content: '';
+            position: absolute;
+            top: -1px;
+            left: -1px;
+            right: -1px;
+            bottom: -1px;
+            border: 1px solid var(--accent);
+            border-radius: 4px;
+            opacity: 0;
+            animation: borderPulse 3s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        .upload-label {
+            font-size: 0.8rem;
+            color: var(--accent);
+            margin-bottom: 10px;
+            display: block;
+            letter-spacing: 0.1em;
+        }
+
+        /* Custom File Input */
+        .file-wrapper {
+            position: relative;
+            margin-bottom: 15px;
+            height: 50px;
+            border: 1px dashed var(--text-dim);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.3s;
+        }
+
+        .file-wrapper:hover {
+            border-color: var(--accent);
+            background: rgba(0, 240, 255, 0.05);
+        }
+
+        input[type="file"] {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .file-msg {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            pointer-events: none;
+        }
+
+        .file-wrapper.mounted {
+            border-color: var(--accent);
+            background: rgba(0, 240, 255, 0.08);
+        }
+
+       .btn-init  {
+            width: 100%;
+            padding: 12px;
+            background: transparent;
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            font-family: 'JetBrains Mono';
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-init::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(0, 240, 255, 0.2);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s ease, height 0.6s ease;
+        }
+
+        .btn-init:hover::before {
+            width: 300px;
+            height: 300px;
+
+        }
+
+        .btn-init:hover {
+            background: linear-gradient(135deg, var(--accent) 0%, rgba(0, 240, 255, 0.8) 100%);
+            color: #000;
+            box-shadow: 0 0 25px rgba(0, 240, 255, 0.5), inset 0 0 15px rgba(255, 255, 255, 0.3);
+            border-color: rgba(221, 255, 0, 0.8);
+            transform: translateY(-2px);
+        }
+
+        .btn-init:active {
+            transform: translateY(0);
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+        }
+
+        /* TERMINAL LOG */
+        .terminal-wrapper {
+            flex: 1;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .term-header {
+            padding: 8px 15px;
+            background: #111;
+            border-bottom: 1px solid #222;
+            font-family: 'JetBrains Mono';
+            font-size: 0.65rem;
+            color: #555;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        #log {
+            flex: 1;
+            padding: 15px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: #33ff00;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            line-height: 1.4;
+            text-shadow: 0 0 2px rgba(51, 255, 0, 0.4);
+        }
+
+        /* Scrollbar */
+        #log::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        #log::-webkit-scrollbar-thumb {
+            background: #333;
+        }
+
+
+        .visual-core {
+            padding: 40px;
+            overflow-y: auto;
+            position: relative;
+            /* Grid Background */
+            background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+
+        /* Waiting State Overlay */
+        .idle-state {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: var(--text-dim);
+            pointer-events: none;
+            transition: opacity 0.5s;
+        }
+
+        .idle-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        /* Results Container (Hidden initially) */
+        .results-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0.98);
+            transition: all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        .results-container.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: scale(1);
+        }
+
+        /* RESULT CARDS */
+        .result-card {
+            background: rgba(15, 20, 25, 0.9);
+            border: 1px solid var(--border);
+            padding: 20px;
+            border-radius: 4px;
+            position: relative;
+            backdrop-filter: blur(10px);
+        }
+
+        /* Card Corner Accents */
+        .result-card::after {
+            content: '';
+            position: absolute;
+            top: -1px;
+            left: -1px;
+            width: 10px;
+            height: 10px;
+            border-top: 2px solid var(--accent);
+            border-left: 2px solid var(--accent);
+        }
+
+        .result-card::before {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            right: -1px;
+            width: 10px;
+            height: 10px;
+            border-bottom: 2px solid var(--accent);
+            border-right: 2px solid var(--accent);
+        }
+
+        .result-card h3 {
+            font-size: 0.8rem;
+            margin: 0 0 15px 0;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 8px;
+        }
+
+        
+
+        .full-width {
+            grid-column: span 2;
+        }
+
+        canvas {
+            width: 100% !important;
+            max-height: 250px;
+        }
+
+        /* --- ANIMATIONS --- */
+        @keyframes borderPulse {
+
+            0%,
+            100% {
+                opacity: 0;
+            }
+
+            50% {
+                opacity: 0.3;
+            }
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+
+
+        .app-shell {
+            height: 100%;
+            width: 100%;
+            background: #030406; /* Deep Void */
+            overflow: hidden;
+        }
+
+        .core-grid {
+            display: grid;
+
+            grid-template-columns: 320px 1fr; 
+            height: 100%;
+            gap: 0; /* Removing gap to use internal padding instead */
+        }
+
+
+        .control-panel {
+
+            background: rgba(10, 12, 16, 0.6);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 40px 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            z-index: 10;
+        }
+
+
+        .terminal-wrapper {
+            display: none !important;
+        }
+
+
+        .upload-zone {
+            /* Removed old border-bottom/padding constraints */
+            border: none;
+            padding: 0;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* The Label */
+        .upload-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.4);
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        /* The File Drop Area */
+        .file-wrapper {
+            position: relative;
+            height: 140px; /* Taller for better drag target */
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px dashed rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+            overflow: hidden;
+        }
+
+        .file-wrapper:hover {
+            border-color: #00ffcc;
+            background: rgba(0, 255, 204, 0.02);
+            box-shadow: 0 0 30px rgba(0, 255, 204, 0.05);
+        }
+
+        /* The Message inside the drop area */
+        .file-msg {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.6);
+            letter-spacing: 0.05em;
+            pointer-events: none;
+            z-index: 2;
+            text-align: center;
+            padding: 0 20px;
+        }
+
+
+        .btn-init {
+            width: 100%;
+            padding: 16px;
+            background: #00ffcc; /* Solid accent for hierarchy */
+            border: none;
+            border-radius: 8px;
+            color: #000;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            box-shadow: 0 4px 20px rgba(0, 255, 204, 0.2);
+        }
+
+        .btn-init:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0, 255, 204, 0.4);
+            background: #fff;
+        }
+
+
+        .visual-core {
+        position: relative;
+        padding: 40px 60px;
+        overflow-y: auto;
+        height: 100%;
+        min-height: 0;
+        background-image: 
+                radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+        background-size: 40px 40px;
+        }
+
+
+        .idle-state {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: rgba(255, 255, 255, 0.2);
+            pointer-events: none;
+        }
+
+        .idle-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            animation: float 6s ease-in-out infinite;
+            text-shadow: 0 0 20px rgba(255,255,255,0.1);
+        }
+
+        .idle-state span {
+            font-family: 'JetBrains Mono';
+            font-size: 10px;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+        }
+
+
+        .results-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+
+        }
+
+        /* The Cards */
+        .result-card {
+            position: relative;
+            background: rgba(20, 22, 28, 0.6); /* Lighter, cleaner dark */
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px; /* Smooth corners */
+            padding: 30px;
+            transition: transform 0.3s ease, border-color 0.3s ease;
+            overflow: hidden;
+        }
+
+        .result-card:hover {
+            border-color: rgba(255, 255, 255, 0.15);
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px -10px rgba(0,0,0,0.5);
+        }
+
+        /* Card Headers */
+        .result-card h3 {
+            margin: 0 0 25px 0;
+            font-family: 'JetBrains Mono';
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.4);
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Decorative line next to header */
+        .result-card h3::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Specific Card Styling */
+        
+
+        
+        .full-width {
+            grid-column: span 2;
+        }
+
+        /* --- ANIMATIONS --- */
+        @keyframes float {
+            0%, 100% { transform: translateY(0); opacity: 0.3; }
+            50% { transform: translateY(-10px); opacity: 0.6; }
+        }
+
+        /* Remove the old pseudo-element corners (they look dated) */
+        .result-card::after, .result-card::before {
+            display: none; 
+        }
+        /* --- ADVANCED DASHBOARD GRID --- */
+        .results-container {
+            display: grid;
+            /* Top Row: Sidebar (350px) | Main Chart (Auto fill) */
+            grid-template-columns: 350px 1fr;
+            /* Allow rows to grow with content */
+            grid-template-rows: auto auto; 
+            gap: 24px;
+            width: 100%;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+
+        
+
+        .gc-container {
+            grid-column: 2 / 3;
+            grid-row: 1 / 2;
+        }
+
+        
+
+        /* Custom Scrollbar for Summary */
+        #summary::-webkit-scrollbar { width: 4px; }
+        #summary::-webkit-scrollbar-track { background: transparent; }
+        #summary::-webkit-scrollbar-thumb { 
+            background: rgba(255, 255, 255, 0.1); 
+            border-radius: 2px; 
+        }
+        #summary::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+        /* --- MANIFEST / SUMMARY STYLING --- */
+        #summary {
+            /* Resetting the code-block styles */
+            font-family: 'JetBrains Mono', monospace;
+            background: transparent !important;
+            border: none !important;
+            padding: 0 !important;
+            overflow: hidden !important; /* No scrollbar needed for summary */
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .manifest-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 4px;
+            border-left: 2px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .manifest-row:hover {
+            background: rgba(255, 255, 255, 0.06);
+            transform: translateX(5px);
+        }
+
+        /* Specific Border Colors for Categories */
+        .row-gold { border-left-color: #E0C48A; }     /* Batch Info */
+        .row-cyan { border-left-color: #00ffcc; }     /* GC Content */
+        .row-green { border-left-color: #34d399; }    /* Coding */
+        .row-purple { border-left-color: #a78bfa; }   /* Promoter */
+
+        .manifest-label {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .manifest-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            font-weight: 700;
+        }
+
+        .val-gold { color: #E0C48A; }
+        .val-white { color: #fff; }
+        .val-cyan { color: #00ffcc; }
+        .val-green { color: #34d399; }
+        .val-purple { color: #a78bfa; }
+
+        .sub-val {
+            font-size: 0.7rem;
+            opacity: 0.6;
+            margin-left: 4px;
+            font-weight: 400;
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="hud-nav">
+        <div class="nav-left">
+            <button class="back-btn" onclick="openModal()">MODE_SELECT</button>
+            <div class="divider"></div>
+            <div class="nav-context">SYS / <span>BATCH CORE ANALYSIS</span></div>
+        </div>
+
+
+
+        <div class="nav-right">
+            <div class="sys-clock" id="clock">00:00:00</div>
+            <div class="status-badge">
+                <div class="status-dot"></div>
+                ONLINE
+            </div>
+            <button id="historyBtn" class="history-unit">
+              <div class="icon-housing">
+                  <svg class="history-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <polyline points="12 6 12 12 16 14"></polyline>
+                  </svg>
+              </div>
+              <div class="text-housing">
+                  <span class="label-stable">HISTORY</span>
+                  <span class="label-hover">RETRIEVE</span>
+              </div>
+            </button>
+            <button id="logoutBtn" class="logout-unit">
+                <div class="power-housing">
+                    <svg class="power-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+                        <line x1="12" y1="2" x2="12" y2="12"></line>
+                    </svg>
+                </div>
+                <div class="text-housing">
+                    <span class="label-stable">LOGOUT</span>
+                    <span class="label-hover">TERMINATE</span>
+                </div>
+            </button>
+        </div>
+    </nav>
+    <div class="modal-backdrop" id="historyModal">
+        <div class="modal-box" style="width: 600px;">
+            <div class="modal-header">
+                <span>ARCHIVE_LOG</span>
+                <span style="font-size: 9px; opacity: 0.5;">READ_ONLY</span>
+            </div>
+            
+            <div class="modal-body" id="historyContent" style="max-height: 400px; overflow-y: auto; text-align: left; padding: 0;">
+                <div style="padding: 20px; text-align: center; color: #666;">LOADING DATA STREAM...</div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="closeHistory()">CLOSE_ARCHIVE</button>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop" id="exitModal">
+        <div class="modal-box">
+            <div class="modal-header">⚠ SYSTEM INTERRUPT</div>
+            <div class="modal-body">
+                <p>ABORT SESSION?</p>
+                <span>Unsaved analysis data will be discarded.</span>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="closeModal()">RESUME</button>
+                <button class="modal-btn" onclick="location.href='/mode-select'">TERMINATE</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-shell">
+
+        <div class="core-grid">
+
+            <aside class="control-panel">
+
+                <div class="upload-zone">
+                    <span class="upload-label">DATA INGESTION POINT</span>
+
+                    <div class="file-wrapper">
+                        <input type="file" id="fastaFile" accept=".fasta,.fa">
+                        <span class="file-msg" id="fileNameDisplay">DRAG FILE OR CLICK TO MOUNT</span>
+                    </div>
+
+                    <button id="startBatch" class="btn-init">INITIALIZE SEQUENCE</button>
+
+                    <button id="exportBatchBtn" class="export-unit" style="margin-top: 15px; display: none;">
+                        <div class="scan-line"></div>
+                        <div class="icon-zone">
+                        </div>
+                        <div class="meta-zone">
+                            <span class="label-main">BATCH REPORT</span>
+                            <span class="label-sub">COMPILE .PDF</span>
+                        </div>
+                    </button>
+                </div>
+
+                <div class="terminal-wrapper">
+                    <div class="term-header">
+                        <span>EXECUTION_LOG</span>
+                        <span>T-TY: ACTIVE</span>
+                    </div>
+                    <div id="log">
+                        > CONNECTING TO COMPUTE NODE...
+                        > READY FOR INPUT.
+                    </div>
+                </div>
+            </aside>
+
+            <main class="visual-core">
+
+                <div class="idle-state" id="idleGraphic">
+                    <div class="idle-icon">⟡</div>
+                    <span>WAITING FOR BATCH PROCESSOR</span>
+                </div>
+
+                <div class="results-container" id="resultsArea">
+
+                    <div class="result-card summary-box">
+                        <h3>PROCESS MANIFEST</h3>
+                        <div id="summary">...</div>
+                    </div>
+
+                    <div class="result-card gc-container">
+                        <h3>NUCLEOTIDE DISTRIBUTION</h3>
+                        <canvas id="gcChart"></canvas>
+                    </div>
+
+                    <div class="result-card">
+                        <h3>CODING PROBABILITY MODEL</h3>
+                        <canvas id="codingConfidenceChart"></canvas>
+                    </div>
+
+                    <div class="result-card">
+                        <h3>PROMOTER REGION CONFIDENCE</h3>
+                        <canvas id="promoterConfidenceChart"></canvas>
+                    </div>
+
+                </div>
+
+            </main>
+        </div>
+        
+
+    </div>
+
+    <script src="/static/batch/batch.js"></script>
+
+    <script>
+        
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+
+</body>
+
+</html>

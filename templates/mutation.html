@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GenoScope // Mutation Diagnostic</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://3dmol.org/build/3Dmol-min.js"></script>
+
+<style>
+
+:root {
+    --bg-void: #030406; 
+    --glass-panel: linear-gradient(135deg, rgba(24, 28, 36, 0.75), rgba(12, 14, 18, 0.85));
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-edge: inset 0 1px 1px rgba(255, 255, 255, 0.15), inset 0 -1px 1px rgba(0, 0, 0, 0.6);
+    
+    --accent: #ff003c;   /* Clinical Ruby */
+    --cyan: #00f2ff;     /* Holographic Cyan */
+    --success: #00ff9d;  /* Clean sequence */
+    --gold: #ffcc00;     /* Warnings */
+    
+    --text-main: #e0e4e8;
+    --text-dim: #7a8294;
+    --nav-height: 64px;
+    --font-head: 'Space Grotesk', sans-serif;
+    --font-code: 'JetBrains Mono', monospace;
+}
+
+* { box-sizing: border-box; outline: none; }
+
+body {
+    margin: 0;
+    background-color: var(--bg-void);
+    background-image: radial-gradient(circle at 70% 30%, rgba(255, 0, 60, 0.05), transparent 60%),
+                      radial-gradient(circle at 30% 80%, rgba(0, 242, 255, 0.05), transparent 60%);
+    color: var(--text-main);
+    font-family: var(--font-head);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+
+.app-shell::before {
+    content: ''; position: fixed; inset: 0;
+    background: linear-gradient(to bottom, rgba(0,0,0,0) 50%, rgba(0,0,0,0.15) 50%);
+    background-size: 100% 3px; pointer-events: none; z-index: 999; opacity: 0.3;
+}
+.app-shell::after {
+    content: ''; position: fixed; inset: 0; opacity: 0.03; z-index: 998; pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+}
+
+.hud-nav {
+    height: var(--nav-height);
+    background: linear-gradient(to bottom, rgba(15, 17, 21, 0.95), rgba(8, 9, 12, 0.95));
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--glass-border);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.5), var(--glass-edge);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px; z-index: 1000; flex-shrink: 0;
+}
+
+.nav-left, .nav-right { display: flex; align-items: center; gap: 20px; }
+
+.back-btn {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--glass-border);
+    color: var(--text-dim); padding: 6px 12px;
+    border-radius: 4px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+    font-family: var(--font-code); font-size: 11px; letter-spacing: 0.1em;
+    cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 8px;
+}
+.back-btn:hover { border-color: var(--cyan); color: var(--cyan); background: rgba(0, 242, 255, 0.05); }
+.back-btn::before { content: '◄'; font-size: 8px; }
+
+.divider { width: 1px; height: 16px; background: var(--glass-border); transform: skewX(-15deg); }
+
+.nav-context { font-family: var(--font-code); font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; }
+.nav-context span { color: var(--accent); font-weight: 600; text-shadow: 0 0 10px rgba(255,0,60,0.3); }
+
+.sys-clock { font-family: var(--font-code); font-size: 11px; color: var(--text-dim); }
+
+.status-badge {
+    display: flex; align-items: center; gap: 8px; font-family: var(--font-code); font-size: 10px; color: var(--success);
+    background: rgba(0, 255, 157, 0.05); padding: 4px 8px; border-radius: 2px;
+    border: 1px solid rgba(0, 255, 157, 0.2); box-shadow: inset 0 0 10px rgba(0,255,157,0.05);
+}
+.status-dot { width: 5px; height: 5px; background: var(--success); border-radius: 50%; box-shadow: 0 0 8px var(--success); animation: pulse 2s infinite; }
+
+.history-unit {
+    background: rgba(0, 229, 255, 0.03); border: 1px solid rgba(0, 229, 255, 0.15);
+    border-radius: 4px; padding: 6px 12px; height: 34px; display: flex; align-items: center; gap: 10px;
+    cursor: pointer; transition: all 0.3s; position: relative; overflow: hidden; box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+}
+.history-unit .icon-housing { display: flex; align-items: center; justify-content: center; width: 16px; height: 16px; color: var(--text-dim); transition: all 0.3s ease; }
+.history-icon { width: 100%; height: 100%; }
+.history-unit .text-housing { position: relative; height: 14px; width: 60px; overflow: hidden; font-family: var(--font-code); font-size: 0.7rem; letter-spacing: 0.08em; font-weight: 500; }
+.history-unit span { position: absolute; width: 100%; height: 100%; display: flex; align-items: center; transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55); }
+.history-unit .label-stable { transform: translateY(0); color: var(--text-main); }
+.history-unit .label-hover { transform: translateY(100%); font-weight: 700; color: var(--cyan); }
+.history-unit:hover { border-color: rgba(0, 229, 255, 0.5); background: rgba(0, 229, 255, 0.08); box-shadow: 0 0 15px rgba(0, 229, 255, 0.15); }
+.history-unit:hover .icon-housing { color: var(--cyan); transform: rotate(-30deg); }
+.history-unit:hover .label-stable { transform: translateY(-100%); opacity: 0; }
+.history-unit:hover .label-hover { transform: translateY(0); opacity: 1; }
+
+.logout-unit {
+    background: rgba(255, 51, 85, 0.03); border: 1px solid var(--glass-border);
+    border-radius: 4px; padding: 6px 12px; height: 34px; display: flex; align-items: center; gap: 10px;
+    cursor: pointer; transition: all 0.3s; position: relative; overflow: hidden; box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+}
+.power-housing { display: flex; align-items: center; justify-content: center; width: 14px; height: 14px; color: var(--text-dim); transition: all 0.3s ease; }
+.power-icon { width: 100%; height: 100%; }
+
+.logout-unit .text-housing { position: relative; height: 12px; width: 65px; overflow: hidden; font-family: var(--font-code); font-size: 0.65rem; letter-spacing: 0.08em; font-weight: 600; }
+.logout-unit span { position: absolute; width: 100%; height: 100%; display: flex; align-items: center; transition: transform 0.3s; }
+.logout-unit .label-stable { transform: translateY(0); color: var(--text-main); }
+.logout-unit .label-hover { transform: translateY(100%); font-weight: 700; color: var(--accent); }
+
+.logout-unit:hover { border-color: var(--accent); background: rgba(255, 0, 60, 0.08); box-shadow: 0 0 15px rgba(255, 0, 60, 0.15); }
+.logout-unit:hover .power-housing { color: var(--accent); animation: flicker 2s infinite; }
+.logout-unit:hover .label-stable { transform: translateY(-100%); opacity: 0; }
+.logout-unit:hover .label-hover { transform: translateY(0); opacity: 1; }
+
+
+.app-shell { display: grid; grid-template-columns: 420px 1fr; width: 100%; flex: 1; overflow: hidden; position: relative; }
+
+.control-panel {
+    background: var(--glass-panel); backdrop-filter: blur(20px);
+    border-right: 1px solid var(--glass-border); box-shadow: 10px 0 30px rgba(0,0,0,0.5), inset -1px 0 0 rgba(255,255,255,0.05);
+    padding: 40px 32px; display: flex; flex-direction: column; position: relative; z-index: 10;
+}
+.control-panel::before {
+
+    font-family: var(--font-code); font-size: 10px; color: rgba(255, 0, 60, 0.15); letter-spacing: 6px; font-weight: 700;
+}
+
+h1 {
+    margin: 0; font-size: 32px; font-weight: 700; letter-spacing: -0.5px;
+    background: linear-gradient(135deg, #ffffff 0%, #888888 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+
+.subtitle {
+    font-family: var(--font-code); font-size: 11px; color: var(--accent); letter-spacing: 2px;
+    margin: 10px 0 40px 0; text-transform: uppercase; display: flex; align-items: center; gap: 10px;
+}
+.subtitle::before { content: ''; width: 6px; height: 6px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 10px var(--accent); animation: pulse 2s infinite; }
+
+label { font-family: var(--font-code); font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; display: block; }
+
+select, textarea {
+    width: 100%; background: rgba(0, 0, 0, 0.4); border: 1px solid var(--glass-border);
+    box-shadow: inset 0 2px 10px rgba(0,0,0,0.8), 0 1px 0 rgba(255,255,255,0.05); color: #fff; padding: 14px 16px; border-radius: 6px;
+    font-family: var(--font-code); font-size: 12px; margin-bottom: 25px; transition: all 0.3s ease;
+}
+select { appearance: none; cursor: pointer; background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237a8594' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e"); background-repeat: no-repeat; background-position: right 15px center; background-size: 14px; }
+textarea { height: 200px; resize: none; color: var(--cyan); line-height: 1.5; }
+
+select:focus, textarea:focus { border-color: var(--accent); background: rgba(255, 0, 60, 0.02); box-shadow: inset 0 2px 10px rgba(0,0,0,0.8), 0 0 15px rgba(255,0,60,0.15); }
+
+.btn-primary {
+    margin-top: auto; padding: 18px;
+    background: linear-gradient(135deg, rgba(255, 0, 60, 0.1), rgba(255, 0, 60, 0.02)); border: 1px solid rgba(255, 0, 60, 0.4);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 5px 15px rgba(255,0,60,0.1); color: var(--accent);
+    font-family: var(--font-code); font-weight: 700; letter-spacing: 3px; cursor: pointer; transition: all 0.3s ease;
+    border-radius: 6px; text-transform: uppercase; position: relative; overflow: hidden;
+}
+.btn-primary::before {
+    content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent); transform: skewX(-20deg); transition: none;
+}
+.btn-primary:hover { background: var(--accent); color: #000; box-shadow: 0 0 25px rgba(255,0,60,0.4); }
+.btn-primary:hover::before { animation: scanPass 0.8s ease-in-out; }
+
+
+.vis-deck {
+    position: relative;
+    background: radial-gradient(circle at center, #0e1116 0%, #030406 100%);
+    padding: 30px;
+    display: grid;
+    grid-template-columns: 1fr 420px; 
+    grid-template-rows: 1fr auto; 
+    gap: 20px;
+    overflow: hidden; z-index: 1;
+}
+
+
+.vis-deck::after {
+    content: ''; position: absolute; bottom: -20%; left: -50%; width: 200%; height: 100%;
+    background-image: linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+    background-size: 60px 60px; transform: perspective(800px) rotateX(70deg);
+    pointer-events: none; opacity: 0.4; animation: gridMove 60s linear infinite; z-index: 0;
+}
+
+
+#viewer {
+    grid-column: 1 / -1; 
+    grid-row: 1 / 2;
+    width: 100%; height: 100%;
+    background: rgba(5, 5, 8, 0.6); backdrop-filter: blur(5px);
+    border: 1px solid var(--glass-border); border-radius: 12px;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.8), inset 0 1px 1px rgba(255,255,255,0.1), 0 0 0 1px rgba(255,255,255,0.02);
+    z-index: 2; position: relative; overflow: hidden;
+}
+#viewer::before, #viewer::after { content: ''; position: absolute; width: 30px; height: 30px; border: 2px solid var(--text-dim); pointer-events: none; z-index: 3; opacity: 0.3; }
+#viewer::before { top: 15px; left: 15px; border-right: none; border-bottom: none; }
+#viewer::after { bottom: 15px; right: 15px; border-left: none; border-top: none; }
+#viewer:empty::before { content: "AWAITING MOLECULAR DATA..."; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: var(--font-code); font-size: 12px; color: rgba(255,255,255,0.2); letter-spacing: 3px; animation: pulse 2s infinite; }
+
+#codonDiff {
+    grid-column: 1 / 2;
+    grid-row: 2 / 3;
+    z-index: 10;
+    background: var(--glass-panel);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    padding: 25px;
+    font-family: var(--font-code);
+    font-size: 12px;
+    overflow-y: auto;
+    max-height: 250px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.1);
+    animation: fadeUp 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+    display: none;
+}
+
+#codonDiff:not(:empty) { display: block; }
+#codonDiff::-webkit-scrollbar { width: 6px; }
+#codonDiff::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+
+.codon-title { font-size: 11px; letter-spacing: 2px; margin-bottom: 15px; color: var(--text-dim); text-transform: uppercase; }
+.codon-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+
+.codon-block {
+    padding: 8px 12px;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 4px;
+    min-width: 45px;
+    text-align: center;
+    color: var(--text-main);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+    transition: 0.3s ease;
+}
+
+.codon-block.mutated {
+    background: linear-gradient(135deg, rgba(255,0,60,0.8), rgba(255,0,60,1));
+    color: #fff;
+    font-weight: 700;
+    border-color: var(--accent);
+    box-shadow: 0 0 15px rgba(255, 0, 60, 0.4), inset 0 1px 0 rgba(255,255,255,0.4);
+    transform: translateY(-2px);
+}
+
+#resultArea {
+    grid-column: 2 / 3;
+    grid-row: 2 / 3;
+    z-index: 10;
+    width: 100%;
+}
+
+.result-card {
+    background: var(--glass-panel); backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border); border-left: 4px solid var(--accent);
+    border-radius: 8px; padding: 25px; font-family: var(--font-code); font-size: 12px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.1);
+    animation: fadeUp 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+    height: 100%;
+}
+
+.result-card div:first-child, .result-card div:nth-child(2) {
+    color: var(--text-dim); margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px; display: flex; justify-content: space-between;
+}
+.result-card strong { color: #fff; font-weight: 600; letter-spacing: 1px; }
+
+.mutation-row {
+    margin-top: 15px; padding: 12px 15px; background: linear-gradient(90deg, rgba(255, 0, 60, 0.1), rgba(255, 0, 60, 0.02));
+    border: 1px solid rgba(255, 0, 60, 0.2); border-radius: 6px; display: flex; justify-content: space-between; align-items: center;
+    color: #ffcccc; box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+.badge { font-size: 9px; padding: 5px 8px; border-radius: 3px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+.missense { background: var(--accent); color: #fff; }
+.silent { background: var(--cyan); color: #000; border: 1px solid rgba(255,255,255,0.5); }
+.nonsense { background: var(--gold); color: #000; }
+
+.no-mutation {
+    margin-top: 20px; padding: 20px; background: rgba(0, 255, 157, 0.05); border: 1px dashed var(--success); border-radius: 6px;
+    color: var(--success); text-align: center; letter-spacing: 1.5px; font-weight: 600; text-transform: uppercase;
+}
+
+
+.modal-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(8px); z-index: 2000; display: none; align-items: center; justify-content: center; }
+.modal-backdrop.active { display: flex; }
+.modal-box { background: linear-gradient(135deg, rgba(20,25,35,0.9), rgba(10,12,15,0.95)); border: 1px solid var(--glass-border); box-shadow: 0 30px 60px rgba(0,0,0,0.8), inset 0 1px 1px rgba(255,255,255,0.1); width: 360px; transform: translateY(15px); animation: modalSlide 0.4s cubic-bezier(0.23, 1, 0.32, 1) forwards; border-radius: 8px; overflow: hidden; }
+.modal-header { padding: 15px 20px; background: rgba(0,0,0,0.4); border-bottom: 1px solid var(--glass-border); font-family: var(--font-code); font-size: 11px; color: var(--cyan); letter-spacing: 0.1em; display: flex; justify-content: space-between; align-items: center; }
+.modal-header.alert { color: var(--accent); }
+.modal-body { padding: 35px 25px; text-align: center; }
+.modal-body p { font-family: var(--font-head); font-size: 16px; color: var(--text-main); margin: 0 0 10px 0; font-weight: 700; letter-spacing: 1px; }
+.modal-body span { font-family: var(--font-code); font-size: 11px; color: var(--text-dim); }
+.modal-actions { display: flex; border-top: 1px solid var(--glass-border); }
+.modal-btn { flex: 1; padding: 18px; background: rgba(0,0,0,0.2); border: none; font-family: var(--font-code); font-size: 11px; cursor: pointer; color: var(--text-dim); border-right: 1px solid var(--glass-border); transition: 0.3s; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; }
+.modal-btn:last-child { border-right: none; }
+.modal-btn:hover { background: rgba(255,255,255,0.03); color: #fff; }
+.modal-btn.danger:hover { background: rgba(255,0,60,0.1); color: var(--accent); }
+
+
+@keyframes modalSlide { to { transform: translateY(0); } }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+@keyframes flicker { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+@keyframes scanPass { 0% { left: -100%; } 100% { left: 200%; } }
+@keyframes gridMove { 0% { background-position: 0 0; } 100% { background-position: 0 60px; } }
+
+@media(max-width: 900px) {
+    /* Unlock page scrolling */
+    body {
+        height: auto;
+        overflow-y: auto;
+    }
+
+    .app-shell {
+        overflow-y: auto;
+    }
+
+    /* Navbar: compact, auto height, reduced padding and font sizes */
+    .hud-nav {
+        height: auto;
+        padding: 8px 12px;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .nav-left,
+    .nav-right {
+        width: 100%;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 6px;
+        font-size: 10px;
+    }
+
+    .back-btn {
+        font-size: 10px;
+        padding: 5px 10px;
+    }
+
+    .nav-context {
+        font-size: 10px;
+        letter-spacing: 0.06em;
+    }
+
+    .sys-clock {
+        font-size: 10px;
+    }
+
+    .status-badge {
+        font-size: 10px;
+        padding: 3px 6px;
+    }
+
+    /* History and Logout: hide text, show icons only to save space */
+    .history-unit .text-housing,
+    .logout-unit .text-housing {
+        display: none;
+    }
+
+    .history-unit,
+    .logout-unit {
+        padding: 6px;
+        height: 28px;
+        width: 28px;
+        justify-content: center;
+    }
+
+    /* Main layout: flex column instead of grid */
+    .app-shell {
+        display: flex;
+        flex-direction: column;
+        height: auto;
+        overflow-y: auto;
+    }
+
+    .control-panel {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--glass-border);
+        padding: 20px 16px;
+    }
+
+    /* Title: reduce letter-spacing to prevent line breaks */
+    h1 {
+        font-size: 24px;
+        letter-spacing: 0;
+    }
+
+    .subtitle {
+        font-size: 10px;
+        letter-spacing: 1px;
+    }
+
+    /* Vis deck: flex column, move DNA/Protein viz and codon map to top or hide */
+    .vis-deck {
+        display: flex;
+        flex-direction: column;
+        padding: 16px 12px 24px;
+        gap: 16px;
+    }
+
+    /* DNA/protein visualization: reduce height for mobile */
+    #viewer {
+        order: 1;
+        width: 100%;
+        height: 220px;
+    }
+
+    /* Codon diff: move to top */
+    #codonDiff {
+        order: 2;
+        width: 100%;
+        max-height: 200px;
+    }
+
+    /* Result area: mutation cards take full width */
+    #resultArea {
+        order: 3;
+        width: 100%;
+    }
+
+    /* Mutation cards: full width, reduced padding */
+    .result-card {
+        width: 95vw;
+        max-width: 95vw;
+        padding: 16px;
+        margin: 0 auto;
+    }
+
+    .mutation-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+        padding: 10px 12px;
+    }
+
+    /* Textareas and selects: better touch targets */
+    select,
+    textarea {
+        font-size: 12px;
+        padding: 12px 10px;
+    }
+
+    /* Button: reduce by 25%, center it */
+    .btn-primary {
+        padding: 12px;
+        font-size: 9px;
+        letter-spacing: 1.5px;
+        width: 75%;
+        margin: 0 auto;
+        margin-top: auto;
+    }
+
+    /* Reduce letter-spacing on all titles to prevent overflow */
+    .codon-title {
+        letter-spacing: 1px;
+        font-size: 10px;
+    }
+
+    .badge {
+        font-size: 8px;
+        padding: 4px 6px;
+        letter-spacing: 0.5px;
+    }
+}
+</style>
+</head>
+
+<body>
+    
+    <nav class="hud-nav">
+        <div class="nav-left">
+            <button class="back-btn" onclick="openModal()">MODE_SELECT</button>
+            <div class="divider"></div>
+            <div class="nav-context"> <span>MUTATION DETECTION</span></div>
+        </div>
+
+        <div class="nav-right">
+            <div class="sys-clock" id="clock">00:00:00</div>
+            <div class="status-badge">
+                <div class="status-dot"></div>
+                ONLINE
+            </div>
+            <button id="logoutBtn" class="logout-unit">
+                <div class="power-housing">
+                    <svg class="power-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+                        <line x1="12" y1="2" x2="12" y2="12"></line>
+                    </svg>
+                </div>
+                <div class="text-housing">
+                    <span class="label-stable">LOGOUT</span>
+                    <span class="label-hover">TERMINATE</span>
+                </div>
+            </button>
+        </div>
+    </nav>
+
+    <div class="modal-backdrop" id="historyModal">
+        <div class="modal-box" style="width: 600px;">
+            <div class="modal-header">
+                <span>ARCHIVE_LOG</span>
+                <span style="font-size: 9px; opacity: 0.5;">READ_ONLY</span>
+            </div>
+            
+            <div class="modal-body" id="historyContent" style="max-height: 400px; overflow-y: auto; text-align: left; padding: 0;">
+                <div style="padding: 40px; text-align: center; color: #666; font-family: 'JetBrains Mono'; font-size: 11px;">
+                    ESTABLISHING CONNECTION TO ARCHIVE SERVER...
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="closeHistory()">CLOSE_ARCHIVE</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop" id="exitModal">
+        <div class="modal-box">
+            <div class="modal-header alert">⚠ SYSTEM INTERRUPT</div>
+            <div class="modal-body">
+                <p>ABORT SESSION?</p>
+                <span>Unsaved analysis data will be discarded.</span>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="closeModal()">RESUME</button>
+                <button class="modal-btn danger" onclick="location.href='/mode-select'">TERMINATE</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-shell">
+
+        <aside class="control-panel">
+            <h1>Genoscope</h1>
+            <div class="subtitle">Mutation Diagnostic Core</div>
+
+            <label>Target Protocol</label>
+            <select id="diseaseSelect">
+                <option value="sickle_cell">HBB (Sickle Cell Anemia)</option>
+                <option value="cystic_fibrosis">CFTR — Cystic Fibrosis</option>
+                <option value="breast_cancer">BRCA1 — Breast Cancer Risk</option>
+                <option value="huntington">HTT — Huntington’s Disease</option>
+            </select>
+
+            <label>Sequence Input</label>
+            <textarea id="dnaInput" placeholder="> PASTE DNA SEQUENCE HERE..."></textarea>
+
+            <button class="btn-primary" onclick="runMutation()">Run Diagnostic</button>
+        </aside>
+
+        <main class="vis-deck">
+            
+            <div id="viewer"></div>
+            
+            <div id="codonDiff"></div>
+            
+            <div id="resultArea"></div>
+
+        </main>
+
+    </div>
+
+    <script>
+
+        document.addEventListener("DOMContentLoaded", () => {
+            // Live Clock
+            setInterval(() => {
+                const now = new Date();
+                document.getElementById('clock').innerText = now.toLocaleTimeString('en-US', { hour12: false });
+            }, 1000);
+
+            // Modal Listeners
+            const logoutBtn = document.getElementById("logoutBtn");
+            if (logoutBtn) logoutBtn.addEventListener("click", handleLogout);
+            
+            const historyBtn = document.getElementById("historyBtn");
+            if (historyBtn) historyBtn.addEventListener("click", () => {
+                document.getElementById('historyModal').classList.add('active');
+            });
+            
+            // Close Modals on Backdrop Click
+            document.getElementById("exitModal").addEventListener('click', (e) => {
+                if (e.target === document.getElementById("exitModal")) closeModal();
+            });
+            
+            document.getElementById("historyModal").addEventListener('click', (e) => {
+                if (e.target === document.getElementById("historyModal")) closeHistory();
+            });
+        });
+
+        // Modal Toggles
+        function openModal() { document.getElementById('exitModal').classList.add('active'); }
+        function closeModal() { document.getElementById('exitModal').classList.remove('active'); }
+        function closeHistory() { document.getElementById('historyModal').classList.remove('active'); }
+
+        // Logout Logic (Matches File 1 exactly)
+        async function handleLogout() {
+            const btn = document.getElementById("logoutBtn");
+            btn.style.pointerEvents = "none";
+            const textLabel = btn.querySelector(".label-hover");
+            const icon = btn.querySelector(".power-housing");
+
+            if(textLabel) textLabel.innerText = "BYE...";
+            if(icon) icon.style.opacity = "0.5";
+
+            try { 
+                await fetch("/auth/logout", { method: "POST" }); 
+            } 
+            catch (err) { 
+                console.warn("Logout warning", err); 
+            }
+
+            setTimeout(() => window.location.href = "/auth", 500);
+        }
+
+
+        async function runMutation(){
+            const disease=document.getElementById("diseaseSelect").value;
+            const sequence=document.getElementById("dnaInput").value.trim();
+            if(!sequence){alert("Enter DNA sequence");return;}
+
+            const btn=document.querySelector(".btn-primary");
+            const originalText = btn.innerText;
+            btn.innerText="PROCESSING...";
+            btn.disabled=true;
+
+            try{
+                const res=await fetch("/api/mutation_check",{
+                    method:"POST",
+                    headers:{"Content-Type":"application/json"},
+                    body:JSON.stringify({disease,sequence})
+                });
+                const data=await res.json();
+                renderResults(data);
+            } catch(e) {
+                alert("System Error");
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        function renderResults(data){
+            const container=document.getElementById("resultArea");
+            container.innerHTML="";
+
+            if(data.error){
+                container.innerHTML=`<div class="result-card" style="border-left-color: red;">${data.error}</div>`;
+                return;
+            }
+
+            let html=`<div class="result-card">`;
+            html+=`<div><strong>TARGET GENE:</strong> <span>${data.gene}</span></div>`;
+            html+=`<div><strong>TOTAL ANOMALIES:</strong> <span>${data.total_mutations}</span></div>`;
+
+            if(!data.mutation_detected){
+                html+=`<div class="no-mutation">NO MUTATION DETECTED<br><span style="font-size: 10px; color: var(--text-dim);">SEQUENCE MATCHES REFERENCE</span></div>`;
+                // Clear out diff if no mutation
+                document.getElementById("codonDiff").innerHTML = "";
+                document.getElementById("viewer").innerHTML = "";
+            } else {
+                data.mutations.forEach(m=>{
+                    let badgeClass="missense";
+                    if(m.mutation_type==="Silent Mutation") badgeClass="silent";
+                    if(m.mutation_type==="Nonsense Mutation") badgeClass="nonsense";
+
+                    html+=`
+                    <div class="mutation-row">
+                        <span>POS ${m.position}</span>
+                        <span>${m.reference_aa} <span style="color:#666">→</span> ${m.mutated_aa}</span>
+                        <span class="badge ${badgeClass}">${m.mutation_type}</span>
+                    </div>`;
+                });
+                load3D(data.pdb_id,data.mutations);
+                renderCodonDiff(data.reference_dna, data.user_dna, data.mutations);
+            }
+
+            html+=`</div>`;
+            container.innerHTML=html;
+        }
+
+        function load3D(pdbId, mutations){
+
+            const element = document.getElementById("viewer");
+            element.innerHTML = "";
+
+            let viewer = $3Dmol.createViewer(element,{backgroundColor:"black"});
+            viewer.clear();
+
+            $3Dmol.download("pdb:"+pdbId, viewer, {}, function(){
+
+                // Base Protein Style
+                viewer.setStyle({}, {cartoon:{color:"spectrum"}});
+
+                mutations.forEach((m, index) => {
+
+
+                    viewer.addStyle(
+                        {resi: m.position},
+                        {
+                            stick:{colorscheme:"redCarbon", radius:0.25},
+                            sphere:{color:"red", scale:0.5}
+                        }
+                    );
+
+
+                    const atoms = viewer.getModel().selectedAtoms({
+                        resi: m.position,
+                        atom: "CA"
+                    });
+
+                    if(atoms.length > 0){
+
+                        viewer.addLabel(
+                            m.reference_aa + " → " + m.mutated_aa +
+                            "\nPos: " + m.position +
+                            "\nType: " + m.mutation_type,
+                            {
+                                position: atoms[0],
+
+                                screenOffset: {
+                                    x: 25 * index,
+                                    y: -20 * index
+                                },
+
+                                backgroundColor: "rgba(255,0,60,0.85)",
+                                fontColor: "white",
+                                fontSize: 14,
+                                borderThickness: 0,
+                                padding: 6
+                            }
+                        );
+                    }
+                });
+
+                viewer.zoomTo();
+                viewer.render();
+            });
+        }
+        function renderCodonDiff(referenceDNA, userDNA, mutations) {
+            const container = document.getElementById("codonDiff");
+            container.innerHTML = "<div class='codon-title'>REFERENCE vs PATIENT CODON MAP</div>";
+
+            const refRow = document.createElement("div");
+            refRow.className = "codon-row";
+
+            const userRow = document.createElement("div");
+            userRow.className = "codon-row";
+
+            for (let i = 0; i < referenceDNA.length; i += 3) {
+                const refCodon = referenceDNA.slice(i, i+3);
+                const userCodon = userDNA.slice(i, i+3);
+
+                const refBlock = document.createElement("div");
+                const userBlock = document.createElement("div");
+
+                refBlock.className = "codon-block";
+                userBlock.className = "codon-block";
+
+                refBlock.innerText = refCodon;
+                userBlock.innerText = userCodon;
+
+                if (refCodon !== userCodon) {
+                    refBlock.classList.add("mutated");
+                    userBlock.classList.add("mutated");
+                }
+
+                refRow.appendChild(refBlock);
+                userRow.appendChild(userBlock);
+            }
+
+            container.appendChild(refRow);
+            container.appendChild(userRow);
+        }
+    </script>
+</body>
+</html>

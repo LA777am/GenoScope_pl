@@ -1,0 +1,399 @@
+/* =========================================
+   GENOSCOPE // EXECUTIVE PRO UI v3.1
+   Aesthetic: Premium 3D Glassmorphism & Active Rings
+   ========================================= */
+
+:root {
+  --bg-void: #050608;
+  
+  /* NEW GLASS VARIABLES */
+  --glass-bg-gradient: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.01));
+  --glass-border-color: rgba(255, 255, 255, 0.12);
+  
+  --text-header: #ffffff;
+  --text-body: #b0b8c4;
+  --text-dim: #6b7280;
+  
+  /* --- PROFESSIONAL OPS PALETTE --- */
+  --cyan: #4a9eff;    
+  --gold: #ff9f43;    
+  --purple: #936deb;  
+  --crimson: #e84158; 
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: var(--bg-void);
+  background-image: radial-gradient(circle at 50% 20%, rgba(74,158,255,0.08), transparent 60%);
+  font-family: 'Montserrat', sans-serif;
+  color: var(--text-header);
+  overflow-x: hidden;
+  cursor: crosshair;
+}
+
+/* --- BACKGROUND --- */
+.scanlines {
+  position: fixed; inset: 0;
+  background: linear-gradient(to bottom, rgba(0,0,0,0) 50%, rgba(0,0,0,0.15) 50%);
+  background-size: 100% 3px; pointer-events: none; z-index: 2; opacity: 0.3;
+}
+
+.ambient-noise {
+  position: fixed; inset: 0; opacity: 0.04; z-index: 1;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+}
+
+.grid-floor {
+  position: fixed; bottom: -25%; left: -50%; width: 200%; height: 100%;
+  background-image: 
+      linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 80px 80px;
+  transform: perspective(1200px) rotateX(70deg);
+  opacity: 0.2; pointer-events: none; z-index: 0;
+  animation: gridMove 90s linear infinite;
+}
+@keyframes gridMove { 0% { background-position: 0 0; } 100% { background-position: 0 80px; } }
+
+/* --- MAIN LAYOUT --- */
+.command-deck {
+  position: relative; z-index: 10;
+  min-height: 100vh;
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex; flex-direction: column;
+  justify-content: center;
+  padding: 80px 60px 60px 60px; 
+}
+
+/* --- HEADER --- */
+.deck-header {
+  width: 100%; max-width: 1200px;
+  margin: 0 auto 40px auto;
+  display: flex; justify-content: space-between; align-items: flex-end;
+  border-bottom: 1px solid var(--glass-border-color);
+  padding-bottom: 20px;
+  animation: slideDown 0.8s ease-out forwards;
+}
+
+.deck-header h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 2.2rem; font-weight: 600; letter-spacing: 2px; margin: 0;
+  color: #fff; text-transform: uppercase;
+}
+.deck-header p {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem; color: var(--text-dim); letter-spacing: 0.3em; margin-top: 5px;
+}
+
+/* --- GRID LAYOUT --- */
+.modules-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); 
+  gap: 50px;
+  width: 100%; max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* --- PREMIUM 3D GLASS TECH CARD --- */
+.tech-card {
+  position: relative;
+  min-height: 320px;
+  cursor: pointer;
+  overflow: hidden;
+  border-radius: 12px;
+  
+  background: 
+    var(--glass-bg-gradient),
+    url("data:image/svg+xml,%3Csvg width='4' height='4' viewBox='0 0 4 4' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 3h1v1H1V3zm2-2h1v1H3V1z' fill='%23ffffff' fill-opacity='0.02'/%3E%3C/svg%3E");
+  
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+
+  border: 1px solid var(--glass-border-color);
+  box-shadow: 
+    0 10px 30px -5px rgba(0, 0, 0, 0.3),
+    inset 0 1px 1px rgba(255, 255, 255, 0.2), 
+    inset 0 -1px 1px rgba(0, 0, 0, 0.3); 
+
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+  opacity: 0; animation: fadeUp 0.6s ease-out forwards;
+}
+
+.tech-card:nth-child(1) { animation-delay: 0.1s; }
+.tech-card:nth-child(2) { animation-delay: 0.2s; }
+.tech-card:nth-child(3) { animation-delay: 0.3s; }
+.tech-card:nth-child(4) { animation-delay: 0.4s; }
+
+.card-content {
+  padding: 45px 50px;
+  height: 100%; width: 100%;
+  display: flex; flex-direction: column;
+  align-items: center; text-align: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+/* --- MODULE ID --- */
+.module-id {
+  position: absolute; top: 20px; left: 20px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem; color: rgba(255,255,255,0.3); letter-spacing: 0.2em;
+}
+
+/* ===== ICON RING SYSTEM ===== */
+.icon-zone {
+  position: relative;
+  width: 70px; height: 70px; 
+  margin-bottom: 30px;
+  display: flex; justify-content: center; align-items: center;
+  color: #fff;
+}
+
+.tech-icon {
+  width: 40px; height: 40px;
+  stroke-linecap: round; stroke-linejoin: round;
+  transition: all 0.3s ease;
+  stroke-width: 1.8;
+  z-index: 2;
+}
+
+/* Solid rotating core ring */
+.ring-core {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 90px; height: 90px;
+  margin-top: -45px; margin-left: -45px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.08);
+  animation: slowSpin 18s linear infinite;
+  transition: all 0.4s ease;
+}
+
+/* Dashed rotating ring */
+.ring-dashed {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 110px; height: 110px;
+  margin-top: -55px; margin-left: -55px;
+  border-radius: 50%;
+  border: 1px dashed rgba(255,255,255,0.25);
+  animation: reverseSpin 12s linear infinite;
+  opacity: 0.6;
+  transition: all 0.4s ease;
+}
+
+@keyframes slowSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes reverseSpin { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
+
+/* --- TYPOGRAPHY --- */
+h2 {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 300;
+  font-size: 1.6rem; 
+  margin: 0 0 15px 0; color: #fff;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+
+.desc {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 400;
+  font-size: 0.85rem; 
+  color: var(--text-body);
+  line-height: 1.6;
+  max-width: 90%;
+  margin-bottom: 35px;
+}
+
+/* --- THE BUTTON (Glass Style) --- */
+.btn-activate {
+  margin-top: auto;
+  width: 100%; padding: 16px 0;
+  
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--glass-border-color);
+  border-radius: 4px;
+  
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem; letter-spacing: 0.25em;
+  font-weight: 600; color: var(--text-dim);
+  text-transform: uppercase;
+  
+  transition: all 0.3s ease-out;
+  cursor: pointer;
+}
+
+/* --- THEME VARIABLES --- */
+.module-cyan { --acc: var(--cyan); }
+.module-gold { --acc: var(--gold); }
+.module-purple { --acc: var(--purple); }
+.module-crimson { --acc: var(--crimson); }
+
+.tech-card .tech-icon { color: var(--acc); }
+
+/* =========================================
+   HOVER STATES (The Magic Happens Here)
+   ========================================= */
+
+.tech-card:hover {
+  transform: translateY(-10px) scale(1.01);
+  border-color: var(--acc);
+  
+  background: 
+    linear-gradient(135deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03)),
+    url("data:image/svg+xml,%3Csvg width='4' height='4' viewBox='0 0 4 4' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 3h1v1H1V3zm2-2h1v1H3V1z' fill='%23ffffff' fill-opacity='0.02'/%3E%3C/svg%3E");
+    
+  box-shadow: 
+    0 30px 60px -10px rgba(0,0,0,0.6), 
+    inset 0 1px 1px rgba(255, 255, 255, 0.4), 
+    0 0 20px -5px var(--acc); 
+}
+
+/* FIX: Connect hover to the new ring classes */
+.tech-card:hover .ring-core {
+  border-color: var(--acc);
+  box-shadow: 0 0 15px rgba(0,0,0,0.5), inset 0 0 10px var(--acc);
+  animation-duration: 4s; /* Spin fast */
+}
+
+.tech-card:hover .ring-dashed {
+  border-color: var(--acc);
+  opacity: 1;
+  animation-duration: 6s; /* Spin fast */
+  filter: drop-shadow(0 0 8px var(--acc));
+}
+
+.tech-card:hover .tech-icon { 
+  transform: scale(1.1); 
+  color: #fff; 
+  filter: drop-shadow(0 0 8px var(--acc)); 
+}
+
+.tech-card:hover h2 { color: #fff; font-weight: 400; }
+
+.tech-card:hover .btn-activate {
+  background: var(--acc);
+  border-color: var(--acc);
+  color: #050608; 
+  font-weight: 700;
+  box-shadow: 0 5px 15px -5px var(--acc);
+}
+
+/* --- TECH CARD PROGRESS BAR (Bottom accent) --- */
+.tech-card::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  width: 0%;
+  background: var(--acc);
+  transition: width 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+  box-shadow: 0 -2px 10px var(--acc);
+}
+
+.tech-card:hover::after {
+  width: 100%;
+}
+
+/* --- FOOTER --- */
+.deck-footer {
+  width: 100%; max-width: 1200px;
+  margin: 40px auto 0 auto;
+  display: flex; justify-content: space-between;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem; color: var(--text-dim);
+  opacity: 0.6;
+}
+
+/* --- LOGOUT BUTTON --- */
+.logout-unit {
+    background: var(--glass-bg-gradient);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border-color);
+    border-radius: 4px;
+    padding: 6px 16px; 
+    height: 36px;
+    display: flex; align-items: center; gap: 12px;
+    cursor: pointer;
+    transition: all 0.3s; position: relative; overflow: hidden;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+.power-housing { display: flex; align-items: center; width: 14px; color: var(--text-dim); transition: color 0.3s; }
+.power-icon { width: 100%; }
+
+.text-housing { 
+    position: relative; 
+    height: 12px; 
+    width: 80px;
+    overflow: hidden; 
+    font-family: 'JetBrains Mono'; 
+    font-size: 0.6rem;
+    letter-spacing: 0.1em; 
+    font-weight: 600; 
+}
+
+.text-housing span { 
+    position: absolute; width: 100%; height: 100%; 
+    display: flex; align-items: center; justify-content: flex-start;
+    transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55); 
+}
+
+.label-stable { color: var(--cyan); transform: translateY(0); }
+.label-hover { color: #ff3333; transform: translateY(100%); font-weight: 700; }
+
+.logout-unit:hover { 
+    border-color: #ff3333; 
+    background: rgba(255, 51, 51, 0.1);
+    box-shadow: 0 5px 15px rgba(255, 51, 51, 0.2);
+}
+.logout-unit:hover .power-housing { color: #ff3333; animation: flicker 0.2s infinite; }
+.logout-unit:hover .label-stable { transform: translateY(-100%); }
+.logout-unit:hover .label-hover { transform: translateY(0); }
+.logout-unit:active { transform: scale(0.95); }
+
+/* --- ANIMATIONS --- */
+@keyframes slideDown { from{opacity:0; transform:translateY(-10px);} to{opacity:1; transform:translateY(0);} }
+@keyframes fadeUp { from{opacity:0; transform:translateY(25px) scale(0.95);} to{opacity:1; transform:translateY(0) scale(1);} }
+@keyframes flicker { 0%,100%{opacity:1;} 50%{opacity:0.5;} }
+
+/* RESPONSIVE */
+@media (max-width: 900px) {
+  body {
+    overflow-y: auto;
+  }
+
+  .command-deck {
+    padding: 40px 20px;
+  }
+
+  /* Grid → Flex stack for modules */
+  .modules-container {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    width: 100%;
+  }
+
+  /* Header reflow to avoid overlap */
+  .deck-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 20px;
+  }
+
+  .deck-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .btn-activate {
+    padding: 18px 0;
+    min-height: 44px; /* comfortable touch target */
+  }
+}

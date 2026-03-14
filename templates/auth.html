@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GenoScope // System Handshake</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@100..400&family=Space+Grotesk:wght@300;600&display=swap" rel="stylesheet">
+    
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+    <style>
+        :root {
+            --bg-deep: #050608;
+            --text-dim: #4a505c;
+            --text-bright: #e0e0e0;
+            --cyan: #00ffcc;
+            --champagne: #E0C48A;
+            --danger: #ff3333;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            height: 100vh;
+            background-color: var(--bg-deep);
+            color: var(--text-bright);
+            font-family: 'JetBrains Mono', monospace;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: crosshair;
+        }
+
+        /* --- BACKGROUND ATMOSPHERE --- */
+        .scanlines {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(to bottom, rgba(255,255,255,0.02) 50%, transparent 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .ambient-noise {
+            position: fixed;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+            opacity: 0.5;
+            z-index: 1;
+        }
+
+        .reticule {
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            border: 1px dashed rgba(0, 255, 204, 0.1);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 2;
+            transition: width 0.2s, height 0.2s;
+        }
+        
+        .access-beam {
+            position: absolute;
+            top: 0; bottom: 0;
+            left: 50%;
+            width: 1px;
+            background: linear-gradient(to bottom, transparent, var(--cyan), transparent);
+            opacity: 0.2;
+            z-index: 5;
+        }
+
+        /* --- TERMINAL CONTAINER --- */
+        .auth-terminal {
+            position: relative;
+            z-index: 20;
+            width: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            padding: 20px;
+        }
+
+        .terminal-header {
+            text-align: center;
+            margin-bottom: 1rem;
+            opacity: 0;
+            animation: bootUp 1s ease-out forwards 0.5s;
+        }
+
+        .terminal-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2.5rem;
+            letter-spacing: 0.2em;
+            margin: 0;
+            color: var(--text-bright);
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+        }
+
+        .terminal-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            margin-top: 0.5rem;
+        }
+
+        .terminal-status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-size: 0.7rem;
+            color: var(--cyan);
+            opacity: 0;
+            animation: fadeIn 1s ease-out forwards 1.2s;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            background-color: var(--cyan);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--cyan);
+            animation: pulse 2s infinite;
+        }
+
+        /* --- NEW GOOGLE BUTTON CONTAINER --- */
+        .google-auth-container {
+            display: flex;
+            justify-content: center;
+            opacity: 0;
+            animation: fadeIn 1s ease-out forwards 1.8s;
+            margin-top: 1rem;
+            z-index: 50; /* Needs high z-index to be clickable over scanlines */
+        }
+
+        /* --- FOOTER --- */
+        .back-intro {
+            text-align: center;
+            margin-top: 1.5rem;
+            opacity: 0;
+            animation: fadeIn 1s ease-out forwards 2s;
+        }
+
+        .back-btn-simple {
+            font-size: 0.7rem;
+            letter-spacing: 0.15em;
+            color: var(--text-dim);
+            text-decoration: none;
+            padding: 8px 12px;
+            border: 1px solid rgba(255,255,255,0.08);
+            transition: color 0.2s ease, border-color 0.2s ease;
+        }
+
+        .back-btn-simple:hover {
+            color: var(--cyan);
+            border-color: var(--cyan);
+        }
+
+        /* --- ANIMATIONS --- */
+        @keyframes bootUp {
+            0% { opacity: 0; transform: scale(0.95); filter: blur(10px); }
+            100% { opacity: 1; transform: scale(1); filter: blur(0); }
+        }
+        @keyframes fadeIn { to { opacity: 1; } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        
+        .observer-tag {
+            position: fixed;
+            font-size: 10px;
+            color: rgba(255,255,255,0.1);
+            top: 20px; right: 20px;
+        }
+
+        @media screen and (max-width: 768px) {
+            body {
+                padding-top: 10vh;
+                align-items: flex-start;
+                height: auto;
+                overflow-y: auto; /* allow natural scrolling on mobile */
+            }
+
+            .auth-terminal {
+                width: 90%;
+                max-width: 400px;
+                margin: 0 auto;
+                gap: 1.5rem;
+            }
+
+            .terminal-title { font-size: 1.8rem; letter-spacing: 0.1em; }
+            .reticule { width: 280px; height: 280px; opacity: 0.5; }
+            .observer-tag { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="scanlines"></div>
+    <div class="ambient-noise"></div>
+    <div class="access-beam"></div>
+    <div class="reticule" id="reticule"></div>
+    <div class="observer-tag">SECURE::OAUTH2::TLS</div>
+
+    <div class="auth-terminal">
+
+        <div class="terminal-header">
+            <h1 class="terminal-title">GENOSCOPE</h1>
+            <p class="terminal-subtitle">Computational Genomic Intelligence</p>
+        </div>
+
+        <div class="terminal-status">
+            <span class="status-dot" id="statusDot"></span>
+            <span id="systemStatus">ESTABLISHING HANDSHAKE...</span>
+        </div>
+
+        <div id="g_id_onload"
+             data-client_id="242394180716-08pne04nsp1ae5hf5pjeuch26hl3q442.apps.googleusercontent.com"
+             data-context="signin"
+             data-ux_mode="popup"
+             data-callback="handleCredentialResponse"
+             data-auto_prompt="false">
+        </div>
+
+        <div class="google-auth-container">
+            <div class="g_id_signin"
+                 data-type="standard"
+                 data-shape="rectangular"
+                 data-theme="filled_black"
+                 data-text="sign_in_with"
+                 data-size="large"
+                 data-logo_alignment="left">
+            </div>
+        </div>
+
+        <div class="back-intro">
+            <a href="/" class="back-btn-simple">←Home Page</a>
+        </div>
+    </div>
+
+    <script>
+        // 1. Maintain the cool Reticule Mouse Tracker
+        document.addEventListener("DOMContentLoaded", () => {
+            const reticule = document.getElementById('reticule');
+            const statusText = document.getElementById('systemStatus');
+
+            document.addEventListener('mousemove', (e) => {
+                const x = e.clientX;
+                const y = e.clientY;
+                setTimeout(() => {
+                    reticule.style.left = x + 'px';
+                    reticule.style.top = y + 'px';
+                }, 50);
+            });
+
+            // Update terminal text to look cool when loaded
+            setTimeout(() => {
+                statusText.innerText = "AWAITING BIO-SIGNATURE (OAUTH)";
+            }, 1500);
+        });
+
+        // 2. The Google Callback (MUST be global so Google can trigger it)
+        async function handleCredentialResponse(response) {
+            const statusText = document.getElementById('systemStatus');
+            const statusDot = document.getElementById('statusDot');
+
+            // Change terminal to "working" state
+            statusText.innerText = "VERIFYING CRYPTOGRAPHIC TOKEN...";
+            statusText.style.color = "var(--champagne)";
+            statusDot.style.backgroundColor = "var(--champagne)";
+            statusDot.style.boxShadow = "0 0 10px var(--champagne)";
+
+            try {
+                // Send Google JWT to Python
+                const res = await fetch('/auth/google', {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ credential: response.credential })
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    throw new Error(data.error || "AUTH FAILED");
+                }
+
+                if (data.success) {
+                    // Success State
+                    statusText.innerText = "ACCESS GRANTED. INITIALIZING...";
+                    statusText.style.color = "var(--cyan)";
+                    statusDot.style.backgroundColor = "var(--cyan)";
+                    statusDot.style.boxShadow = "0 0 10px var(--cyan)";
+
+                    // Fade out the screen like a movie
+                    document.body.style.transition = "opacity 0.8s ease";
+                    document.body.style.opacity = 0;
+
+                    // Redirect to dashboard
+                    setTimeout(() => {
+                        window.location.href = "/mode-select";
+                    }, 800);
+                }
+
+            } catch (err) {
+                // Error State
+                statusText.innerText = "ACCESS DENIED: " + err.message;
+                statusText.style.color = "var(--danger)";
+                statusDot.style.backgroundColor = "var(--danger)";
+                statusDot.style.boxShadow = "0 0 10px var(--danger)";
+            }
+        }
+    </script>
+</body>
+</html>

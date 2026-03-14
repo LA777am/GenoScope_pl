@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>GenoScope // Executive Select</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Montserrat:wght@300;400;600&family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="/static/auth/mode_select.css">
+  <script src="/static/auth/mode_select.js"></script>
+</head>
+
+<body>
+
+  <div class="scanlines"></div>
+  <div class="ambient-noise"></div>
+
+  <div class="grid-floor"></div>
+
+  <main class="command-deck">
+
+    <header class="deck-header">
+      <div class="header-left">
+        <h1 class="deck-title">
+          <span class="title-line"></span>
+          <span class="title-text">SELECT OPERATIONAL MODE</span>
+          <span class="title-line"></span>
+        </h1>
+        <p>SYSTEM READY // CHOOSE PROTOCOL</p>
+      </div>
+
+      <button id="logoutBtn" class="logout-unit">
+          <div class="power-housing">
+              <svg class="power-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+                  <line x1="12" y1="2" x2="12" y2="12"></line>
+              </svg>
+          </div>
+          <div class="text-housing">
+              <span class="label-stable">LOGOUT</span>
+              <span class="label-hover">TERMINATE</span>
+          </div>
+      </button>
+    </header>
+
+    <section class="modules-container">
+
+      <div class="tech-card module-cyan" data-target="/single">
+        <span class="module-id">MOD::01</span>
+        <div class="card-content">
+          <div class="icon-zone">
+            <div class="ring-core"></div>
+            <div class="ring-dashed"></div>
+            <svg class="tech-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+            </svg>
+          </div>
+          <h2>RAPID SEQUENCER</h2>
+          <p class="desc">Single-stream analysis. Real-time ML classification & promoter detection.</p>
+          <div class="btn-activate">INITIALIZE UNIT</div>
+        </div>
+      </div>
+
+      <div class="tech-card module-gold" data-target="/batch">
+        <span class="module-id">MOD::02</span>
+        <div class="card-content">
+          <div class="icon-zone">
+            <div class="ring-core"></div>
+            <div class="ring-dashed"></div>
+            <svg class="tech-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="12" cy="12" r="10"></circle>
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M12 2v3m0 14v3M2 12h3m14 0h3"></path>
+              <path d="M4.93 4.93l2.12 2.12m9.9 9.9l2.12 2.12M4.93 19.07l2.12-2.12m9.9-9.9l2.12-2.12"></path>
+            </svg>
+          </div>
+          <h2>LABORATORY CORE</h2>
+          <p class="desc">High-volume batch processing. Cohort analytics & distribution metrics.</p>
+          <div class="btn-activate">ACCESS MAINFRAME</div>
+        </div>
+      </div>
+
+      <div class="tech-card module-purple" data-target="/compare">
+        <span class="module-id">MOD::03</span>
+        <div class="card-content">
+          <div class="icon-zone">
+            <div class="ring-core"></div>
+            <div class="ring-dashed"></div>
+            <svg class="tech-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M8 3 4 7l4 4"></path>
+              <path d="M4 7h16"></path>
+              <path d="M16 21l4-4-4-4"></path>
+              <path d="M20 17H4"></path>
+            </svg>
+          </div>
+          <h2>ALIGNMENT ENGINE</h2>
+          <p class="desc">Pairwise homology search. Levenshtein & k-mer similarity scoring.</p>
+          <div class="btn-activate">LOAD ENGINE</div>
+        </div>
+      </div>
+
+      <div class="tech-card module-crimson" data-target="/mutation">
+        <span class="module-id">MOD::04</span>
+        <div class="card-content">
+          <div class="icon-zone">
+            <div class="ring-core"></div>
+            <div class="ring-dashed"></div>
+            <svg class="tech-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M2 12c0 5.5 4.5 10 10 10s10-4.5 10-10"></path>
+              <path d="M12 2v20"></path>
+              <path d="M2 12s4.5-5 10-5 10 5 10 5"></path>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+            </svg>
+          </div>
+          <h2>MUTATION DIAGNOSTIC</h2>
+          <p class="desc">Clinical reference comparison. Amino acid translation & variant classification.</p>
+          <div class="btn-activate">ENGAGE PROTOCOL</div>
+        </div>
+      </div>
+
+    </section>
+
+    <footer class="deck-footer">
+      <span>SYSTEM INTEGRITY: 100%</span>
+      <span>GENOSCOPE v2.5.0</span>
+    </footer>
+
+  </main>
+
+</body>
+</html>
